@@ -1,12 +1,10 @@
 import React from 'react';
-import { EventEmitter } from 'events';
 
 const allHookStates = new Map();
 const current = {
   componentPointer: null,
   hookIndex: -1,
 };
-const emitter = new EventEmitter();
 
 const resetCurrentPointer = (nextPointer) => {
   current.componentPointer = nextPointer;
@@ -33,7 +31,7 @@ export const useState = (initialState) => {
     (nextState) => {
       if (nextState !== currentState) {
         hookStates[hookIndex] = nextState;
-        emitter.emit('HOOK_STATE_UPDATE', componentPointer);
+        componentPointer.forceUpdate();
       }
     },
   ];
@@ -47,10 +45,6 @@ class HooksBinder extends React.Component {
     allHookStates.set(this, []);
 
     resetCurrentPointer(this);
-  }
-
-  componentDidMount() {
-    emitter.on('HOOK_STATE_UPDATE', pointer => this === pointer && this.forceUpdate());
   }
 
   componentWillUpdate() {
