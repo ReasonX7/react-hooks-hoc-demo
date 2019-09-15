@@ -1,10 +1,12 @@
 import React from 'react';
+import { EventEmitter } from 'events';
 
 const allHookStates = new Map();
 const current = {
   componentPointer: null,
   hookIndex: -1,
 };
+const emitter = new EventEmitter();
 
 const resetCurrentPointer = (nextPointer) => {
   current.componentPointer = nextPointer;
@@ -20,16 +22,13 @@ export const useState = (initialState) => {
   const hookStates = allHookStates.get(componentPointer);
 
   if (hookStates.length === hookIndex) {
-    // "Mount" hook state.
     hookStates.push(initialState);
   }
 
-  const currentState = hookStates[hookIndex];
-
   return [
-    currentState,
+    hookStates[hookIndex],
     (nextState) => {
-      if (nextState !== currentState) {
+      if (nextState !== hookStates[hookIndex]) {
         hookStates[hookIndex] = nextState;
         componentPointer.forceUpdate();
       }
@@ -37,14 +36,55 @@ export const useState = (initialState) => {
   ];
 };
 
+const arraysAreShallowEqual = (a, b) => {
+  if (a === b) {
+    return true;
+  }
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((item, index) => item === b[index]);
+};
+
+export const useEffect = (callback, args) => {
+  const hookIndex = ++current.hookIndex;
+  const componentPointer = current.componentPointer;
+
+  const hookStates = allHookStates.get(componentPointer);
+
+  const handler = (callback) => (pointer) => pointer === componentPointer && callback();
+
+  if (hookStates.length === hookIndex) {
+    hookStates.push({ unsubscribe: () => {}, args });
+
+    emitter.on('MOUNT', handler(() => {
+      hookStates[hookIndex] = { unsubscribe: callback(), args }
+    }));
+    emitter.on('UNMOUNT', handler(() => {
+      hookStates[hookIndex].unsubscribe();
+    }));
+  } else {
+    emitter.once('UPDATE', handler(() => {
+      if (!args || (args.length > 0 && !arraysAreShallowEqual(hookStates[hookIndex].args, args))) {
+        hookStates[hookIndex].unsubscribe();
+        hookStates[hookIndex] = { unsubscribe: callback(), args };
+      }
+    }))
+  }
+};
+
 class HooksBinder extends React.Component {
   constructor(props) {
     super(props);
-
+    
     // We're using "this" as an identifier to the current hook set.
     allHookStates.set(this, []);
 
     resetCurrentPointer(this);
+  }
+
+  componentDidMount() {
+    emitter.emit('MOUNT', this);
   }
 
   componentWillUpdate() {
@@ -52,7 +92,12 @@ class HooksBinder extends React.Component {
   }
 
   componentWillUnmount() {
+    emitter.emit('UNMOUNT');
     allHookStates.delete(this);
+  }
+
+  componentDidUpdate() {
+    emitter.emit('UPDATE', this);
   }
 
   render() {
