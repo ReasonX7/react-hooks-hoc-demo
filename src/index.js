@@ -18,6 +18,7 @@ ReactDOM.render(
     </div>
     <div>
       <Counter />
+      <Counter />
     </div>
   </div>,
   document.getElementById('app'),

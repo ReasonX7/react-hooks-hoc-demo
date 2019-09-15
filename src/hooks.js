@@ -73,6 +73,9 @@ export const useEffect = (callback, args) => {
   }
 };
 
+// The HOC is used in order to, sort of, bind to the React Virtual DOM events.
+// Also it is used as identifier for each set of hook states that normally would be stored
+// in Virtual DOM nodes (as far, as I know this is how it was made in React v16.8).
 class HooksBinder extends React.Component {
   constructor(props) {
     super(props);
