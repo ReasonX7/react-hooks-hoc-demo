@@ -1,17 +1,32 @@
 import React from 'react';
-import { useState, withHooks } from '../hooks';
 
-const ColorSwitcher = ({ firstColor = 'orange', secondColor = 'white' }) => {
-  const [color, setColor] = useState(firstColor);
+class ColorSwitcher extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      color: this.props.firstColor || 'orange',
+    };
+  }
 
-  return (
-    <button
-      style={{ background: color }}
-      onClick={() => setColor(color === firstColor ? secondColor : firstColor)}
-    >
-      Switch Color
-    </button>
-  );
-};
+  handleClick = () => {
+    const { color } = this.state;
+    const { firstColor = 'orange', secondColor = 'white' } = this.props;
+    this.setState(() => ({
+      color: color === firstColor ? secondColor : firstColor,
+    }));
+  };
 
-export default withHooks(ColorSwitcher);
+  render() {
+    const { color } = this.state;
+    return (
+      <button
+        style={{ background: color }}
+        onClick={this.handleClick}
+      >
+        Switch Color
+      </button>
+    );
+  }
+}
+
+export default ColorSwitcher;
